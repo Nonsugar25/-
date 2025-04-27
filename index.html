@@ -1,0 +1,214 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>4年1組個人懇談予約フォーム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background: url('background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: sans-serif;
+      padding: 20px;
+      margin: 0;
+      text-align: center;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.85);
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px auto;
+      max-width: 600px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .hidden { display: none; }
+    select, textarea, input, button {
+      margin-top: 10px;
+      font-size: 1em;
+      padding: 8px;
+      width: 90%;
+      max-width: 400px;
+    }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    #admin-section { margin-top: 30px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+<h1>4年1組個人懇談予約フォーム</h1>
+
+<form id="reservationForm">
+  <label>児童名：
+    <select id="student" required>
+      <option value="">選択してください</option>
+      <option>秋月ひなの</option>
+      <option>岩永まき</option>
+      <option>岩谷ゆうま</option>
+      <option>緒方だいご</option>
+      <option>小野たいが</option>
+      <option>釜坂りん</option>
+      <option>川口はるき</option>
+      <option>岸川まこと</option>
+      <option>小池りく</option>
+      <option>古賀すばる</option>
+      <option>重松ゆうさ</option>
+      <option>杉光はな</option>
+      <option>黒葛原ゆずか</option>
+      <option>藤武なほ</option>
+      <option>富永みさき</option>
+      <option>中尾そうた</option>
+      <option>野口あこ</option>
+      <option>日高はやと</option>
+      <option>百武あいる</option>
+      <option>福田ふう</option>
+      <option>古川かほ</option>
+      <option>松永そら</option>
+      <option>山口こうき</option>
+      <option>山口ひびき</option>
+      <option>山口ひろか</option>
+      <option>山口りこ</option>
+    </select>
+  </label><br>
+
+  <label>希望日：
+    <select id="date" required onchange="updateTimeOptions()">
+      <option value="">選択してください</option>
+      <option>7月21日</option>
+      <option>7月22日</option>
+      <option>7月23日</option>
+      <option>7月24日</option>
+      <option>7月25日</option>
+    </select>
+  </label><br>
+
+  <label>希望時間：
+    <select id="time" required>
+      <option value="">日付を先に選択してください</option>
+    </select>
+  </label><br>
+
+  <label>備考：
+    <textarea id="note" rows="3" placeholder="例：兄弟同時希望など"></textarea>
+  </label><br>
+
+  <button type="submit">送信</button>
+</form>
+
+<div style="margin-top:30px;">
+  <h2>管理者ログイン</h2>
+  <input type="password" id="admin-pass" placeholder="パスワード入力">
+  <button onclick="loginAdmin()">ログイン</button>
+</div>
+
+<div id="admin-section" class="hidden">
+  <h2>予約一覧</h2>
+  <table id="reservationTable">
+    <thead><tr><th>児童名</th><th>希望日</th><th>時間</th><th>備考</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="downloadCSV()">CSV出力</button>
+  <button onclick="clearReservations()">予約リストリセット</button>
+</div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = "kondan2025";
+
+document.getElementById('reservationForm').onsubmit = function(e) {
+  e.preventDefault();
+  const student = document.getElementById('student').value;
+  const date = document.getElementById('date').value;
+  const time = document.getElementById('time').value;
+  const note = document.getElementById('note').value;
+  let data = JSON.parse(localStorage.getItem('reservations') || '[]');
+
+  data = data.filter(r => r.student !== student);
+
+  if (data.some(r => r.date === date && r.time === time)) {
+    alert("その日時はすでに予約されています。他の時間を選択してください。");
+    return;
+  }
+
+  data.push({student, date, time, note});
+  localStorage.setItem('reservations', JSON.stringify(data));
+  alert('予約を受け付けました！');
+  this.reset();
+  updateTimeOptions();
+};
+
+function loginAdmin() {
+  const pass = document.getElementById('admin-pass').value;
+  if (pass === ADMIN_PASSWORD) {
+    document.getElementById('admin-section').classList.remove('hidden');
+    showReservations();
+  } else {
+    alert("パスワードが違います");
+  }
+}
+
+function showReservations() {
+  const data = JSON.parse(localStorage.getItem('reservations') || '[]');
+  const tbody = document.querySelector('#reservationTable tbody');
+  tbody.innerHTML = '';
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.student}</td><td>${r.date}</td><td>${r.time}</td><td>${r.note}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function downloadCSV() {
+  const data = JSON.parse(localStorage.getItem('reservations') || '[]');
+  let csv = "児童名,希望日,時間,備考\n";
+  data.forEach(r => {
+    csv += `${r.student},${r.date},${r.time},${r.note}\n`;
+  });
+  const blob = new Blob([csv], {type: "text/csv"});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = "reservations.csv";
+  link.click();
+}
+
+function clearReservations() {
+  if (confirm('本当にすべての予約をリセットしますか？')) {
+    localStorage.removeItem('reservations');
+    showReservations();
+    updateTimeOptions();
+    alert('すべての予約をリセットしました');
+  }
+}
+
+function updateTimeOptions() {
+  const selectedDate = document.getElementById('date').value;
+  const timeSelect = document.getElementById('time');
+  timeSelect.innerHTML = '';
+
+  if (!selectedDate) {
+    timeSelect.innerHTML = '<option value="">日付を先に選択してください</option>';
+    return;
+  }
+
+  const allTimes = ["14:00", "14:15", "14:30", "14:45", "15:00", "15:15", "15:30", "15:45", "16:00", "16:15"];
+  const data = JSON.parse(localStorage.getItem('reservations') || '[]');
+  const reservedTimes = data.filter(r => r.date === selectedDate).map(r => r.time);
+
+  allTimes.forEach(time => {
+    const option = document.createElement('option');
+    option.value = time;
+    if (reservedTimes.includes(time)) {
+      option.disabled = true;
+      option.textContent = time + "（予約済）";
+    } else {
+      option.textContent = time;
+    }
+    timeSelect.appendChild(option);
+  });
+}
+</script>
+
+</body>
+</html>
